@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    min-height: 100vh;
+    padding: 16px;
+    font-family: 'VT323', monospace;
+    overflow: hidden;
+  }
+
+  :root {
+    --win-bg: #c0c0c0;
+    --win-dark: #808080;
+    --win-darker: #404040;
+    --win-light: #ffffff;
+    --win-blue: #000080;
+    --win-blue-light: #0000c0;
+    --win-yellow: #ffff00;
+    --win-text: #000000;
+  }
+
+  /* ===== ASSISTANT CONTAINER ===== */
+  #assistant {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    position: relative;
+  }
+
+  /* ===== SPEECH BUBBLE ===== */
+  #bubble {
+    background: var(--win-bg);
+    border-top: 2px solid var(--win-light);
+    border-left: 2px solid var(--win-light);
+    border-right: 2px solid var(--win-darker);
+    border-bottom: 2px solid var(--win-darker);
+    padding: 0;
+    width: 260px;
+    position: relative;
+    transform-origin: bottom right;
+    animation: bubbleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow: 2px 2px 0 #000;
+  }
+
+  #bubble.hidden {
+    display: none;
+  }
+
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* Title bar */
+  .title-bar {
+    background: linear-gradient(to right, var(--win-blue), var(--win-blue-light));
+    padding: 3px 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+  }
+
+  .title-bar-text {
+    color: white;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .title-bar-text::before {
+    content: '💬';
+    font-size: 12px;
+  }
+
+  .title-bar-btn {
+    width: 16px;
+    height: 14px;
+    background: var(--win-bg);
+    border-top: 1px solid var(--win-light);
+    border-left: 1px solid var(--win-light);
+    border-right: 1px solid var(--win-darker);
+    border-bottom: 1px solid var(--win-darker);
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'VT323', monospace;
+    line-height: 1;
+    color: var(--win-text);
+    flex-shrink: 0;
+  }
+
+  .title-bar-btn:active {
+    border-top: 1px solid var(--win-darker);
+    border-left: 1px solid var(--win-darker);
+    border-right: 1px solid var(--win-light);
+    border-bottom: 1px solid var(--win-light);
+  }
+
+  /* Content area */
+  .bubble-content {
+    padding: 10px 12px 8px;
+  }
+
+  #message-text {
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--win-text);
+    min-height: 50px;
+  }
+
+  #message-text .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: black;
+    vertical-align: text-bottom;
+    animation: blink 0.7s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Buttons */
+  .bubble-buttons {
+    display: flex;
+    gap: 6px;
+    padding: 0 12px 10px;
+    flex-wrap: wrap;
+  }
+
+  .win-btn {
+    background: var(--win-bg);
+    border-top: 2px solid var(--win-light);
+    border-left: 2px solid var(--win-light);
+    border-right: 2px solid var(--win-darker);
+    border-bottom: 2px solid var(--win-darker);
+    padding: 2px 10px;
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    cursor: pointer;
+    color: var(--win-text);
+    min-width: 60px;
+    text-align: center;
+    transition: none;
+  }
+
+  .win-btn:active {
+    border-top: 2px solid var(--win-darker);
+    border-left: 2px solid var(--win-darker);
+    border-right: 2px solid var(--win-light);
+    border-bottom: 2px solid var(--win-light);
+    padding: 3px 9px 1px 11px;
+  }
+
+  .win-btn:focus { outline: 1px dotted black; outline-offset: -3px; }
+
+  /* Arrow pointer at bottom right */
+  #bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    right: 28px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 0px solid transparent;
+    border-top: 10px solid var(--win-darker);
+    filter: drop-shadow(1px 1px 0 #000);
+  }
+
+  #bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 29px;
+    width: 0;
+    height: 0;
+    border-left: 9px solid transparent;
+    border-right: 0px solid transparent;
+    border-top: 9px solid var(--win-bg);
+    z-index: 1;
+  }
+
+  /* ===== PAPERCLIP CHARACTER ===== */
+  #clippy-wrap {
+    position: relative;
+    cursor: pointer;
+    width: 72px;
+    height: 88px;
+    transition: transform 0.1s;
+  }
+
+  #clippy-wrap:hover { transform: scale(1.08); }
+  #clippy-wrap:active { transform: scale(0.95); }
+
+  #clippy-svg {
+    width: 72px;
+    height: 88px;
+    filter: drop-shadow(2px 3px 2px rgba(0,0,0,0.35));
+  }
+
+  /* Idle bounce animation */
+  @keyframes idleBounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-4px) rotate(-2deg); }
+    75% { transform: translateY(-2px) rotate(2deg); }
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    20% { transform: translateY(-8px) rotate(-5deg); }
+    40% { transform: translateY(-12px) rotate(5deg); }
+    60% { transform: translateY(-8px) rotate(-3deg); }
+    80% { transform: translateY(-4px) rotate(2deg); }
+  }
+
+  @keyframes celebrate {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg) scale(1.1); }
+    75% { transform: rotate(10deg) scale(1.1); }
+  }
+
+  #clippy-wrap.idle { animation: idleBounce 3s ease-in-out infinite; }
+  #clippy-wrap.wave { animation: wave 0.8s ease-in-out; }
+  #clippy-wrap.celebrate { animation: celebrate 0.5s ease-in-out 3; }
+
+  /* Eyes blink */
+  @keyframes eyeBlink {
+    0%, 96%, 100% { transform: scaleY(1); }
+    98% { transform: scaleY(0.1); }
+  }
+
+  .eye-group { animation: eyeBlink 4s ease-in-out infinite; transform-origin: center; }
+
+  /* Scan line overlay on character */
+  #clippy-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Sleeping ZZZ when hidden */
+  #zzz {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 18px;
+    animation: floatUp 2s ease-in-out infinite;
+    display: none;
+    user-select: none;
+  }
+
+  #zzz.visible { display: block; }
+
+  @keyframes floatUp {
+    0% { opacity: 0; transform: translateY(0) scale(0.7); }
+    50% { opacity: 1; transform: translateY(-8px) scale(1); }
+    100% { opacity: 0; transform: translateY(-16px) scale(1.2); }
+  }
+
+  /* Tooltip when sleeping */
+  #tooltip {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: var(--win-yellow);
+    border: 1px solid black;
+    padding: 2px 6px;
+    font-size: 15px;
+    font-family: 'VT323', monospace;
+    white-space: nowrap;
+    display: none;
+    pointer-events: none;
+    box-shadow: 1px 1px 0 #000;
+  }
+
+  #clippy-wrap:hover #tooltip { display: block; }
+</style>
+</head>
+<body>
+
+<div id="assistant">
+
+  <!-- Speech bubble -->
+  <div id="bubble">
+    <div class="title-bar">
+      <span class="title-bar-text">Assistant</span>
+      <button class="title-bar-btn" id="close-btn" title="Close">✕</button>
+    </div>
+    <div class="bubble-content">
+      <div id="message-text"><span class="cursor"></span></div>
+    </div>
+    <div class="bubble-buttons" id="btn-container"></div>
+  </div>
+
+  <!-- Clippy character -->
+  <div id="clippy-wrap" class="idle" id="clippy">
+    <div id="zzz">💤</div>
+    <div id="tooltip">Click me!</div>
+
+    <!-- SVG Paperclip with face -->
+    <svg id="clippy-svg" viewBox="0 0 72 88" xmlns="http://www.w3.org/2000/svg">
+      <!-- Paperclip body -->
+      <g id="clip-body">
+        <!-- Outer loop -->
+        <path d="M 36 78
+                 C 14 78, 10 60, 10 46
+                 L 10 20
+                 C 10 10, 18 4, 28 4
+                 C 38 4, 46 10, 46 20
+                 L 46 52
+                 C 46 58, 42 62, 36 62
+                 C 30 62, 26 58, 26 52
+                 L 26 22
+                 C 26 18, 29 16, 32 16
+                 C 35 16, 37 18, 37 22
+                 L 37 50"
+              fill="none"
+              stroke="#e8c84a"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"/>
+
+        <!-- Shine on clip -->
+        <path d="M 13 22 L 13 46 C 13 58, 16 68, 24 74"
+              fill="none"
+              stroke="rgba(255,255,200,0.6)"
+              stroke-width="2"
+              stroke-linecap="round"/>
+
+        <!-- Inner clip highlight -->
+        <path d="M 29 22 L 29 52 C 29 56.5, 32 59, 35 59"
+              fill="none"
+              stroke="rgba(255,255,200,0.4)"
+              stroke-width="1.5"
+              stroke-linecap="round"/>
+      </g>
+
+      <!-- Face area (on the wide part of the clip) -->
+      <!-- Face background circle -->
+      <ellipse cx="36" cy="36" rx="11" ry="10" fill="#ffd700" opacity="0.15"/>
+
+      <!-- Eyes -->
+      <g class="eye-group" style="transform-origin: 36px 33px;">
+        <!-- Left eye white -->
+        <ellipse cx="30" cy="32" rx="3.5" ry="4" fill="white"/>
+        <!-- Right eye white -->
+        <ellipse cx="42" cy="32" rx="3.5" ry="4" fill="white"/>
+        <!-- Left pupil -->
+        <circle cx="31" cy="33" r="2" fill="#1a1a2e"/>
+        <!-- Right pupil -->
+        <circle cx="43" cy="33" r="2" fill="#1a1a2e"/>
+        <!-- Pupils shine -->
+        <circle cx="31.8" cy="32" r="0.7" fill="white"/>
+        <circle cx="43.8" cy="32" r="0.7" fill="white"/>
+        <!-- Eyebrows (friendly raised) -->
+        <path d="M 27.5 27.5 Q 30 26 32.5 27.5" stroke="#b8860b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M 39.5 27.5 Q 42 26 44.5 27.5" stroke="#b8860b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </g>
+
+      <!-- Smile -->
+      <path d="M 29 39 Q 36 44 43 39" stroke="#b8860b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+      <!-- Rosy cheeks -->
+      <ellipse cx="26" cy="38" rx="3" ry="2" fill="#ffaaaa" opacity="0.5"/>
+      <ellipse cx="46" cy="38" rx="3" ry="2" fill="#ffaaaa" opacity="0.5"/>
+    </svg>
+  </div>
+
+</div>
+
+<script>
+  // ===== MESSAGES AND STATE =====
+
+  const messages = [
+    {
+      text: "Welcome to Coco's website!\n\nYou're probably here to get to know her work and I'm here to help you around.\n\nDo you want a tour?",
+      buttons: [
+        { label: "Yes, Please", action: 'tour' },
+        { label: "I'll explore myself", action: 'backroom' }
+      ]
+    },
+    {
+      text: "Coco specializes in building brands that actually connect with people — strategy, storytelling, the whole deal. Scroll down to see her work!",
+      buttons: [
+        { label: "What else?", action: 'tip2' },
+        { label: "On it! 👇", action: 'sleep' }
+      ]
+    },
+    {
+      text: "You'll find her case studies, past projects, and a little about her background. It's worth a proper look around!",
+      buttons: [
+        { label: "How do I reach her?", action: 'tip3' },
+        { label: "Cool, thanks!", action: 'thanks' }
+      ]
+    },
+    {
+      text: "There should be a contact section on the site — don't be shy! Coco loves connecting with new people. 💌",
+      buttons: [
+        { label: "Got it!", action: 'thanks' }
+      ]
+    },
+    {
+      text: "Awesome! Enjoy the visit. Click me anytime if you need a nudge in the right direction. 😊",
+      buttons: [
+        { label: "Will do!", action: 'sleep' }
+      ]
+    }
+  ];
+
+  const randomIdlePhrases = [
+    "Still exploring? Take your time — there's good stuff here!",
+    "Hey again! 👋 Need help finding anything?",
+    "Psst — don't forget to check out Coco's case studies!",
+    "Looking for something specific? I can point you in the right direction.",
+    "Don't leave without checking out Coco's work — it's worth it!"
+  ];
+
+  let currentMsgIndex = 0;
+  let typingTimeout = null;
+  let isTyping = false;
+  let isSleeping = false;
+  let idleTimer = null;
+
+  const bubble = document.getElementById('bubble');
+  const msgText = document.getElementById('message-text');
+  const btnContainer = document.getElementById('btn-container');
+  const clippyWrap = document.getElementById('clippy-wrap');
+  const zzz = document.getElementById('zzz');
+  const closeBtn = document.getElementById('close-btn');
+
+  // ===== TYPEWRITER EFFECT =====
+  function typeMessage(text, callback) {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    isTyping = true;
+    let i = 0;
+    msgText.innerHTML = '<span class="cursor"></span>';
+
+    function typeChar() {
+      if (i < text.length) {
+        const cursor = msgText.querySelector('.cursor');
+        if (text[i] === '\n') {
+          // Insert a <br> before the cursor
+          const br = document.createElement('br');
+          cursor.parentNode.insertBefore(br, cursor);
+          i++;
+          // Pause slightly longer at line breaks for dramatic effect
+          typingTimeout = setTimeout(typeChar, 180);
+        } else {
+          cursor.insertAdjacentText('beforebegin', text[i]);
+          i++;
+          typingTimeout = setTimeout(typeChar, 28 + Math.random() * 20);
+        }
+      } else {
+        isTyping = false;
+        if (callback) callback();
+      }
+    }
+    typeChar();
+  }
+
+  function showButtons(buttons) {
+    btnContainer.innerHTML = '';
+    buttons.forEach(btn => {
+      const b = document.createElement('button');
+      b.className = 'win-btn';
+      b.textContent = btn.label;
+      b.onclick = () => handleAction(btn.action);
+      btnContainer.appendChild(b);
+    });
+  }
+
+  function showMessage(index) {
+    if (index >= messages.length) { handleAction('sleep'); return; }
+    currentMsgIndex = index;
+    const msg = messages[index];
+    bubble.classList.remove('hidden');
+    btnContainer.innerHTML = '';
+    typeMessage(msg.text, () => showButtons(msg.buttons));
+    animateClippy('wave');
+  }
+
+  function showCustomMessage(text, buttons) {
+    bubble.classList.remove('hidden');
+    btnContainer.innerHTML = '';
+    typeMessage(text, () => {
+      btnContainer.innerHTML = '';
+      buttons.forEach(btn => {
+        const b = document.createElement('button');
+        b.className = 'win-btn';
+        b.textContent = btn.label;
+        b.onclick = () => handleAction(btn.action);
+        btnContainer.appendChild(b);
+      });
+    });
+    animateClippy('wave');
+  }
+
+  function showBackroomMessage() {
+    bubble.classList.remove('hidden');
+    btnContainer.innerHTML = '';
+    const text = "There's actually a funner backroom I can show you if you don't want to hire her anyway.";
+    typeMessage(text, () => {
+      btnContainer.innerHTML = '';
+      const link = document.createElement('a');
+      link.href = '#PERSONAL_PROJECTS_URL'; // ← swap this with your URL
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.className = 'win-btn';
+      link.textContent = '🚪 Take me there';
+      link.style.textDecoration = 'none';
+      link.style.display = 'inline-block';
+      btnContainer.appendChild(link);
+
+      const dismiss = document.createElement('button');
+      dismiss.className = 'win-btn';
+      dismiss.textContent = 'Maybe later';
+      dismiss.onclick = () => handleAction('sleep');
+      btnContainer.appendChild(dismiss);
+    });
+    animateClippy('celebrate');
+  }
+
+  function handleAction(action) {
+    switch(action) {
+      case 'tour': showMessage(1); break;
+      case 'backroom': showBackroomMessage(); break;
+      case 'tip2': showMessage(2); break;
+      case 'tip3': showMessage(3); break;
+      case 'tip4': showMessage(3); break;
+      case 'thanks': showMessage(4); break;
+      case 'dismiss':
+      case 'sleep':
+        bubble.classList.add('hidden');
+        goToSleep();
+        break;
+    }
+  }
+
+  // ===== ANIMATIONS =====
+  function animateClippy(type) {
+    clippyWrap.className = type;
+    if (type !== 'idle') {
+      const dur = type === 'wave' ? 800 : 1500;
+      setTimeout(() => { clippyWrap.className = 'idle'; }, dur);
+    }
+  }
+
+  function goToSleep() {
+    isSleeping = true;
+    zzz.classList.add('visible');
+    clippyWrap.className = '';
+    clearTimeout(idleTimer);
+  }
+
+  function wakeUp() {
+    isSleeping = false;
+    zzz.classList.remove('visible');
+    clippyWrap.className = 'idle';
+  }
+
+  // ===== CLICK HANDLER =====
+  clippyWrap.addEventListener('click', () => {
+    if (isSleeping) {
+      wakeUp();
+      const phrase = randomIdlePhrases[Math.floor(Math.random() * randomIdlePhrases.length)];
+      showCustomMessage(phrase, [
+        { label: "Show tips", action: 'tour' },
+        { label: "Nope, bye!", action: 'backroom' }
+      ]);
+    } else if (bubble.classList.contains('hidden')) {
+      showMessage(0);
+    } else {
+      // Skip typing if in progress
+      if (isTyping) {
+        clearTimeout(typingTimeout);
+        isTyping = false;
+        const msg = messages[currentMsgIndex];
+        // Render text with line breaks
+        msgText.innerHTML = msg.text.split('\n').map(line => line || '&nbsp;').join('<br>');
+        showButtons(msg.buttons);
+      }
+    }
+  });
+
+  // Close button
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    bubble.classList.add('hidden');
+    goToSleep();
+  });
+
+  // ===== INIT =====
+  // Small delay before appearing for the first time
+  setTimeout(() => {
+    showMessage(0);
+  }, 1200);
+
+  // Reset idle timer — in real use, parent page can postMessage events
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    if (!isSleeping) {
+      idleTimer = setTimeout(() => {
+        if (bubble.classList.contains('hidden')) {
+          wakeUp();
+          showMessage(0);
+        }
+      }, 30000); // reappear after 30s of inactivity
+    }
+  }
+
+  window.addEventListener('mousemove', resetIdleTimer);
+  resetIdleTimer();
+
+  // ===== PARENT COMMUNICATION =====
+  // Accept messages from parent page
+  window.addEventListener('message', (event) => {
+    const { type, text } = event.data || {};
+    if (type === 'show') {
+      wakeUp();
+      showMessage(0);
+    }
+    if (type === 'custom' && text) {
+      wakeUp();
+      showCustomMessage(text, [
+        { label: "Got it!", action: 'sleep' },
+        { label: "More tips", action: 'tour' }
+      ]);
+    }
+    if (type === 'hide') {
+      bubble.classList.add('hidden');
+      goToSleep();
+    }
+  });
+</script>
+</body>
+</html>
